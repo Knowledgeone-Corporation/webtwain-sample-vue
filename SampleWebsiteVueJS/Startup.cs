@@ -52,7 +52,7 @@ namespace SampleWebsiteVueJS
                 if (env.IsDevelopment())
                 {
                     // Launch development server for Vue.js
-                    spa.UseVueDevelopmentServer();
+                    spa.UseVueDevelopmentServer(Configuration["NpmServerPort"]);
                 }
             });
         }

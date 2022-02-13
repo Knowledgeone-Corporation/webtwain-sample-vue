@@ -15,14 +15,22 @@ namespace SampleWebsiteVueJS
     public static class VueHelper
     {
         // default port number of 'npm run serve'
-        private static int Port { get; } = 8080;
-        private static Uri DevelopmentServerEndpoint { get; } = new Uri($"http://localhost:{Port}");
+        private static int Port { set; get; }
+        private static Uri DevelopmentServerEndpoint { set; get; }
         private static TimeSpan Timeout { get; } = TimeSpan.FromSeconds(30);
         // done message of 'npm run serve' command.
         private static string DoneMessage { get; } = "DONE  Compiled successfully in";
 
-        public static void UseVueDevelopmentServer(this ISpaBuilder spa)
+        public static void UseVueDevelopmentServer(this ISpaBuilder spa, string port = "3000")
         {
+            if (string.IsNullOrEmpty(port))
+            {
+                port = "3000";
+            }
+
+            Port = int.Parse(port);
+
+            DevelopmentServerEndpoint = new Uri($"http://localhost:{Port}");
             spa.UseProxyToSpaDevelopmentServer(async () =>
             {
                 var loggerFactory = spa.ApplicationBuilder.ApplicationServices.GetService<ILoggerFactory>();
@@ -35,10 +43,11 @@ namespace SampleWebsiteVueJS
 
                 // launch vue.js development server
                 var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+                var args = $"{(isWindows ? "/c npm " : "")}run serve -- --port {Port}";
                 var processInfo = new ProcessStartInfo
                 {
                     FileName = isWindows ? "cmd" : "npm",
-                    Arguments = $"{(isWindows ? "/c npm " : "")}run serve",
+                    Arguments = args,
                     WorkingDirectory = "client-app",
                     RedirectStandardError = true,
                     RedirectStandardInput = true,
