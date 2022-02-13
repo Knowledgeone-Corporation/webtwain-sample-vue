@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div><h1>Scan Demo Page</h1></div>
+        <div><h1>Scan Demo Page : Vue</h1></div>
         <div class="alert alert-info alert-dismissible show" role="alert">
             <strong>Note: </strong>The demonstration service has the following limitations;
             - generated documents contain a watermark,
@@ -15,10 +15,10 @@
             <div>
                 <select v-model="selectedOption" class="form-control">
                     <option value="-1">Please select...</option>
-                    <option value="0">Hidden</option>
-                    <option value="1">Visible</option>
-                    <option value="2">Web</option>
-                    <option value="3">Desktop</option>
+                    <option value="0">Hidden: no user interface will be shown</option>
+                    <option value="1">Visible: WebTWAIN user interface will be shown</option>
+                    <option value="2">Web: only the WebTWAIN user interface will be shown</option>
+                    <option value="3">Desktop: only the scanner's TWAIN user interface will be shown</option>
                 </select>
             </div>
         </div>

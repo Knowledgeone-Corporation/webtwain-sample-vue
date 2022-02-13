@@ -1,10 +1,5 @@
 <template>
     <div id="k1interface-visible" class="show">
-        <div><label>Name:</label></div>
-        <input asp-for="Name" class="form-control" />
-
-        <div><label>Title:</label></div>
-        <input asp-for="Title" class="form-control" />
 
         <div><label>Scan Document:</label></div>
         <div class="input-group">
