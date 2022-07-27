@@ -2,7 +2,7 @@
     <div>
         <div class="alert alert-danger" id="errorMessageDiv">
             <div>
-                <label>Error</label>
+                <label class="scanning-label">Error</label>
             </div>
             <pre id="errorMessageOutput">{{msg}}</pre>
         </div>

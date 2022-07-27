@@ -1,28 +1,28 @@
 <template>
-    <div id="k1interface-hidden" class="show">
+    <div id="k1interface-hidden" class="show" v-if="isDisplayUI">
         <div>
             <div id="device-group" class="twain-feature-group">
-                <label>Device</label>
-                <select v-model="selectedScanner" class="form-control">
-                    <option v-for="option in mappedDevices" v-bind:key="option.value" v-bind:value="option.value">
+                <label class="scanning-label">Device</label>
+                <select v-model="selectedDevice" class="form-control">
+                    <option v-for="option in discoveredDevices" v-bind:key="option.value" v-bind:value="option.value">
                         {{ option.display }}
                     </option>
                 </select>
             </div>
 
-            <label>Output File Name</label>
+            <label class="scanning-label mt-2">Output File Name</label>
             <input v-model="outputFilename" id="sel-output-name" class="form-control" type="text" placeholder="Please enter a file name" />
 
-            <label>Output File Type</label>
+            <label class="scanning-label mt-2">Output File Type</label>
             <select v-model="selectedFileTypeOption" class="form-control">
-                <option v-for="option in mappedFileTypeOptions" v-bind:key="option.value" v-bind:value="option.value">
+                <option v-for="option in fileTypeOptions" v-bind:key="option.value" v-bind:value="option.value">
                     {{ option.display }}
                 </option>
             </select>
 
-            <label>OCR Type</label>
+            <label class="scanning-label mt-2">OCR Type</label>
             <select v-model="selectedOcrType" class="form-control">
-                <option v-for="option in mappedOcrTypes" v-bind:key="option.value" v-bind:value="option.value">
+                <option v-for="option in ocrOptions" v-bind:key="option.value" v-bind:value="option.value">
                     {{ option.display }}
                 </option>
             </select>
@@ -35,138 +35,110 @@
                         <span>Scan</span>
                     </button>
                 </div>
-                <input class="form-control filename" aria-label="Text input with multiple buttons" />
             </div>
         </div>
-        <br />
-
-        <ScanCompleted v-if="acquireResponse != null" :msg="JSON.stringify(acquireResponse, null, 4)"></ScanCompleted>
-        <ScanError v-if="acquireError != null" :msg="acquireError"></ScanError>
     </div>
 </template>
 
 <script>
     import $ from 'jquery'
-    import '../lib/k1scanservice/css/k1ss.min.css';
-    let K1WebTwainModule = require('../lib/k1scanservice/js/k1ss_framework.js');
-    let K1WebTwain = K1WebTwainModule.K1WebTwain;
-    import ScanCompleted from './ScanCompleted'
-    import ScanError from './ScanError'
-
+    import { K1WebTwain } from '../lib/k1scanservice/js/k1ss_obfuscated.js'
+    import { convertRawOptions, generateScanFileName, renderOptions } from '../utils/scanningUtils.js'
+    
     export default {
         name: 'ScannerInterfaceDesktop',
-        components: {
-            ScanCompleted,
-            ScanError
-        },
         data: function () {
             return {
-                outputFilename: "",
-                acquireResponse: null,
-                acquireError: null,
-                selectedScanner: -1,
-                selectedOcrType: -1,
-                selectedFileTypeOption: -1,
-                mappedDevices: [],
-                mappedOcrTypes: [],
-                mappedFileTypeOptions: [],
+                outputFilename: '',
+                selectedDevice: 0,
+                selectedOcrType: K1WebTwain.Options.OcrType.None,
+                selectedFileTypeOption: K1WebTwain.Options.OutputFiletype.PDF,
+                discoveredDevices: [],
+                ocrOptions: [],
+                fileTypeOptions: [],
+                isDisplayUI: false
             }
         },
         methods: {
             acquire: function () {
-                this.acquireResponse = null;
-                this.acquireError = null;
-
+                this.isDisplayUI = false;
                 let acquireRequest = {
-                    deviceId: this.selectedScanner,
+                    deviceId: this.selectedDevice,
                     filetype: this.selectedFileTypeOption,
                     ocrType: this.selectedOcrType,
                     filename: this.outputFilename,
                 };
 
-                window.console.log(acquireRequest);
-
                 K1WebTwain.Acquire(acquireRequest)
                     .then(response => {
-                        window.console.log(response);
-                        this.acquireResponse = response;
+                        this.$parent.completeAcquire({
+                            acquireResponse: JSON.stringify(response.uploadResponse, null, 4),
+                            acquireError: '',
+                        });
                     })
                     .catch(err => {
                         window.console.error(err);
-                        let myError = null;
-
                         if (err.responseText) {
-                            myError = err.responseText;
+                            this.$parent.completeAcquire({
+                                acquireResponse: '',
+                                acquireError: err.responseText,
+                            });
                         }
 
                         if (err.responseJSON) {
                             try {
-                                myError = JSON.stringify(err.responseJSON, null, 4);
-                            }
-                            catch (e) {
+                                this.$parent.completeAcquire({
+                                    acquireResponse: '',
+                                    acquireError: JSON.stringify(err.responseJSON, null, 4),
+                                });
+                            } catch (e) {
                                 window.console.warn(e);
                             }
                         }
-
-                        this.acquireError = myError;
-                        window.console.error(this.acquireError);
                     });
+            },
+            renderSelection: function () {
+                K1WebTwain.GetDevices().then(devices => {
+                    let mappedDevices = devices.map(device => ({ value: device.id, display: device.name }));
+                    let mappedOcrTypes = convertRawOptions(K1WebTwain.Options.OcrType, true);
+                    let mappedFileTypeOptions = convertRawOptions(K1WebTwain.Options.OutputFiletype, true);
+
+                    this.ocrOptions = renderOptions(mappedOcrTypes);
+                    this.fileTypeOptions = renderOptions(mappedFileTypeOptions);
+                    this.discoveredDevices = renderOptions(mappedDevices);
+                    this.outputFilename = generateScanFileName();
+                }).catch(err => {
+                    window.console.error(err);
+                });
             }
         },
         props: {
         },
         mounted: function () {
-            window.console.log("ScannerInterfaceDesktop");
-
-            //let K1WebTwain = K1WebTwainModule.K1WebTwain;
-            window.console.log(K1WebTwain);
-            var configuration = {
-                onComplete: function () { },
-                viewButton: $(".k1ViewBtn"),
-                fileUploadURL: 'http://localhost:50598/home/uploadfile',
-                clientID: "" + Date.now(),
-                setupFile: document.location.origin + '/Home/DownloadSetup',
-                interfacePath: document.location.origin + "/interface.html",
+            let self = this;
+            let configuration = {
+               onComplete: function () { }, //function called when scan complete
+                viewButton: null, //This is optional. Specify a element that when clicked will view scanned document
+                fileUploadURL: document.location.origin + '/Home/UploadFile', //This is the service that the scanned document will be uploaded to when complete
+                clientID: "" + Date.now(), //This is a way to identify the user who is scanning.  It should be unique per user.  Session ID could be used if no user logged in
+                setupFile: document.location.origin + '/Home/DownloadSetup', //location of the installation file if service doesn't yet exist
+                interfacePath: document.location.origin + "/interface.html", // This is optional if your application lives under a subdomain.
                 scannerInterface: K1WebTwain.Options.ScannerInterface.Desktop,
-                scanButton: $("#scanbtn"),
+                scanButton: $("#scanbtn"), // the scan button
             };
 
-            K1WebTwain.Configure(configuration).then(x => {
-                window.console.log(x);
-                K1WebTwain.GetDevices().then(devices => {
-                    window.console.log(devices);
-                    let mappedDevices = devices.map(device => {
-                        return { value: device.id, display: device.name };
-                    });
+            K1WebTwain.Configure(configuration).then(() => {
+                this.isDisplayUI = false;
 
-                    if (mappedDevices.length > 0) {
-                        mappedDevices = [{ value: -1, display: "Please Select" }].concat(mappedDevices);
-                    }
-
-                    let mappedOcrTypes = Object.keys(K1WebTwain.Options.OcrType).map((key) => {
-                        return { value: K1WebTwain.Options.OcrType[key], display: key };
-                    });
-
-                    if (mappedOcrTypes.length > 0) {
-                        mappedOcrTypes = [{ value: -1, display: "Please Select" }].concat(mappedOcrTypes);
-                    }
-
-                    let mappedFileTypeOptions = Object.keys(K1WebTwain.Options.OutputFiletype).map((key) => {
-                        return { value: K1WebTwain.Options.OutputFiletype[key], display: key };
-                    });
-
-                    if (mappedFileTypeOptions.length > 0) {
-                        mappedFileTypeOptions = [{ value: -1, display: "Please Select" }].concat(mappedFileTypeOptions);
-                    }
-
-                    this.mappedDevices = mappedDevices;
-                    this.mappedOcrTypes = mappedOcrTypes;
-                    this.mappedFileTypeOptions = mappedFileTypeOptions;
-                }).catch(err => {
-                    window.console.error(err);
+                K1WebTwain.ResetService().then(function () {
+                    setTimeout(() => {
+                        self.renderSelection();
+                        self.isDisplayUI = true;
+                    },4000)
                 });
-            }).catch(x => {
-                window.console.log(x);
+            }).catch(err => {
+                window.console.log(err);
+                K1WebTwain.ResetService();
             });
         }
     }
