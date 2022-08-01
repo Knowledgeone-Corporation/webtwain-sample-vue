@@ -11,14 +11,14 @@
 
 
         <div className="form-group">
-            <label>Interface Option</label>
+            <label class="scanning-label">Interface Option</label>
             <div>
-                <select v-model="selectedOption" class="form-control">
+                <select v-model="selectedOption" class="form-control" @change="onInterfaceChange($event)">
                     <option value="-1">Please select...</option>
-                    <option value="0">Hidden: no user interface will be shown</option>
-                    <option value="1">Visible: WebTWAIN user interface will be shown</option>
-                    <option value="2">Web: only the WebTWAIN user interface will be shown</option>
-                    <option value="3">Desktop: only the scanner's TWAIN user interface will be shown</option>
+                    <option value="0">Hidden : Not using Webtwain or Native UI</option>
+                    <option value="1">Visible : Uses Webtwain and Native UI</option>
+                    <option value="2">Web : only uses Webtwain UI</option>
+                    <option value="3">Desktop : only uses Native scanner UI</option>
                 </select>
             </div>
         </div>
@@ -27,23 +27,46 @@
         <ScannerInterfaceVisible v-if="selectedOption == 1"></ScannerInterfaceVisible>
         <ScannerInterfaceWeb v-if="selectedOption == 2"></ScannerInterfaceWeb>
         <ScannerInterfaceDesktop v-if="selectedOption == 3"></ScannerInterfaceDesktop>
+
+        <ScanCompleted v-if="acquireResponse" :msg="acquireResponse"></ScanCompleted>
+        <ScanError v-if="acquireError" :msg="acquireError"></ScanError>
     </div>
 </template>
 
 <script>
+    import ScanCompleted from './ScanCompleted'
+    import ScanError from './ScanError'
     import ScannerInterfaceDesktop from './ScannerInterfaceDesktop.vue'
     import ScannerInterfaceHidden from './ScannerInterfaceHidden.vue'
     import ScannerInterfaceVisible from './ScannerInterfaceVisible.vue'
     import ScannerInterfaceWeb from './ScannerInterfaceWeb.vue'
+
+    import '../lib/k1scanservice/css/k1ss.min.css';
 
     export default {
         name: 'Home',
         data: function () {
             return {
                 selectedOption: -1,
+                acquireResponse: '',
+                acquireError: '',
             }
         },
+        methods: {
+            onInterfaceChange: function ($event) {
+                this.selectedOption = $event.target.value;
+                this.acquireResponse = ''
+                this.acquireError = '';
+            },
+            completeAcquire: function ($event) {
+                this.selectedOption = -1;
+                this.acquireResponse = $event.acquireResponse;
+                this.acquireError = $event.acquireError;
+            }     
+        },
         components: {
+            ScanCompleted,
+            ScanError,
             ScannerInterfaceDesktop,
             ScannerInterfaceHidden,
             ScannerInterfaceVisible,
