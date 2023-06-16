@@ -77,22 +77,30 @@
                         });
                     })
                     .catch(err => {
-                        window.console.error(err);
-                        if (err.responseText) {
-                            this.$parent.completeAcquire({
-                                acquireResponse: '',
-                                acquireError: err.responseText,
-                            });
-                        }
-
-                        if (err.responseJSON) {
-                            try {
+                        if(err) {
+                            if (err.responseText) {
                                 this.$parent.completeAcquire({
                                     acquireResponse: '',
-                                    acquireError: JSON.stringify(err.responseJSON, null, 4),
+                                    acquireError: err.responseText,
                                 });
-                            } catch (e) {
-                                window.console.warn(e);
+                            }
+
+                            if (err.responseJSON) {
+                                try {
+                                    this.$parent.completeAcquire({
+                                        acquireResponse: '',
+                                        acquireError: JSON.stringify(err.responseJSON, null, 4),
+                                    });
+                                } catch (e) {
+                                    window.console.warn(e);
+                                }
+                            }
+
+                            if (err.statusText && err.statusText === 'timeout') {
+                                this.$parent.completeAcquire({
+                                    acquireResponse: '',
+                                    acquireError: 'Timeout error while processing/uploading scanned documents.',
+                                });
                             }
                         }
                     });
