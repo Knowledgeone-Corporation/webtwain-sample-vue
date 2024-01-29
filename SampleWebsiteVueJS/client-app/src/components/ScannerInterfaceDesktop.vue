@@ -27,6 +27,13 @@
                 </option>
             </select>
 
+            <label class="scanning-label mt-2">Save To</label>
+            <select v-model="selectedSaveToOption" class="form-control">
+                <option v-for="option in saveToTypeOptions" v-bind:key="option.value" v-bind:value="option.value">
+                    {{ option.display }}
+                </option>
+            </select>
+
             <br />
 
             <div class="input-group">
@@ -42,7 +49,7 @@
 
 <script>
     import $ from 'jquery'
-    import { K1WebTwain } from '../lib/k1scanservice/js/k1ss_obfuscated.js'
+    import { K1WebTwain } from '../lib/k1scanservice/js/k1ss.js'
     import { convertRawOptions, generateScanFileName, renderOptions } from '../utils/scanningUtils.js'
     
     export default {
@@ -51,11 +58,13 @@
             return {
                 outputFilename: '',
                 selectedDevice: 0,
+                ocrOptions: [],
                 selectedOcrType: K1WebTwain.Options.OcrType.None,
+                saveToTypeOptions: [],
+                selectedSaveToOption: K1WebTwain.Options.SaveToType.Upload,
+                fileTypeOptions: [],
                 selectedFileTypeOption: K1WebTwain.Options.OutputFiletype.PDF,
                 discoveredDevices: [],
-                ocrOptions: [],
-                fileTypeOptions: [],
                 isDisplayUI: false
             }
         },
@@ -67,13 +76,25 @@
                     filetype: this.selectedFileTypeOption,
                     ocrType: this.selectedOcrType,
                     filename: this.outputFilename,
+                    saveToType: this.selectedSaveToOption
                 };
 
                 K1WebTwain.Acquire(acquireRequest)
                     .then(response => {
+                        let responseMessage = response.uploadResponse;
+
+                        if (this.selectedSaveToOption === K1WebTwain.Options.SaveToType.Local) {
+                            responseMessage = {
+                                filename: response.filename,
+                                fileSize: `${response.fileLength} (${response.sizeDisplay})`,
+                                fileExtention: response.extension
+                            };
+                        }
+
                         this.$parent.completeAcquire({
-                            acquireResponse: JSON.stringify(response.uploadResponse, null, 4),
+                            acquireResponse: JSON.stringify(responseMessage, null, 4),
                             acquireError: '',
+                            saveToType: this.selectedSaveToOption
                         });
                     })
                     .catch(err => {
@@ -110,8 +131,10 @@
                     let mappedDevices = devices.map(device => ({ value: device.id, display: device.name }));
                     let mappedOcrTypes = convertRawOptions(K1WebTwain.Options.OcrType, true);
                     let mappedFileTypeOptions = convertRawOptions(K1WebTwain.Options.OutputFiletype, true);
+                    let mappedSaveToTypeOptions = convertRawOptions(K1WebTwain.Options.SaveToType, true);
 
                     this.ocrOptions = renderOptions(mappedOcrTypes);
+                    this.saveToTypeOptions = renderOptions(mappedSaveToTypeOptions);
                     this.fileTypeOptions = renderOptions(mappedFileTypeOptions);
                     this.discoveredDevices = renderOptions(mappedDevices);
                     this.outputFilename = generateScanFileName();

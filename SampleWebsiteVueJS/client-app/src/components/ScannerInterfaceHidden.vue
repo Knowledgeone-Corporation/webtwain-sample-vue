@@ -72,6 +72,13 @@
                 </option>
             </select>
 
+            <label class="scanning-label mt-2">Save To</label>
+            <select v-model="selectedSaveToOption" class="form-control">
+                <option v-for="option in saveToTypeOptions" v-bind:key="option.value" v-bind:value="option.value">
+                    {{ option.display }}
+                </option>
+            </select>
+
             <br />
 
             <div class="input-group">
@@ -89,7 +96,7 @@
 <script>
     import $ from 'jquery'
     import { isEmpty } from 'lodash'
-    import { K1WebTwain } from '../lib/k1scanservice/js/k1ss_obfuscated.js'
+    import { K1WebTwain } from '../lib/k1scanservice/js/k1ss.js'
     import { convertRawOptions, defaultOptionsValue, generateScanFileName, renderOptions } from '../utils/scanningUtils.js'
 
     export default {
@@ -113,6 +120,8 @@
                 selectedOcrOption: K1WebTwain.Options.OcrType.None,
                 fileTypeOptions: [],
                 selectedFileTypeOption: K1WebTwain.Options.OutputFiletype.PDF,
+                saveToTypeOptions: [],
+                selectedSaveToOption: K1WebTwain.Options.SaveToType.Upload,
                 outputFilename: '',
                 isDisplayUI: false
             }
@@ -188,14 +197,27 @@
                     filetype: this.selectedFileTypeOption,
                     ocrType: this.selectedOcrOption,
                     filename: this.outputFilename,
+                    saveToType: this.selectedSaveToOption
                 };
 
                 K1WebTwain.Acquire(acquireRequest)
                     .then(response => {
+                        let responseMessage = response.uploadResponse;
+
+                        if (this.selectedSaveToOption === K1WebTwain.Options.SaveToType.Local) {
+                            responseMessage = {
+                                filename: response.filename,
+                                fileSize: `${response.fileLength} (${response.sizeDisplay})`,
+                                fileExtention: response.extension
+                            };
+                        }
+
                         this.$parent.completeAcquire({
-                            acquireResponse: JSON.stringify(response.uploadResponse, null, 4),
+                            acquireResponse: JSON.stringify(responseMessage, null, 4),
                             acquireError: '',
+                            saveToType: this.selectedSaveToOption
                         });
+
                     })
                     .catch(err => {
                         if(err) {
@@ -231,11 +253,13 @@
                     let mappedDevices = devices.map(device => ({ value: device.id, display: device.name }));
                     let mappedOcrTypes = convertRawOptions(K1WebTwain.Options.OcrType, true);
                     let mappedFileTypeOptions = convertRawOptions(K1WebTwain.Options.OutputFiletype, true);
+                    let mappedSaveToTypeOptions = convertRawOptions(K1WebTwain.Options.SaveToType, true);
 
                     this.ocrOptions = renderOptions(mappedOcrTypes);
                     this.fileTypeOptions = renderOptions(mappedFileTypeOptions);
                     this.discoveredDevices = renderOptions(mappedDevices);
                     this.outputFilename = generateScanFileName();
+                    this.saveToTypeOptions = renderOptions(mappedSaveToTypeOptions);
 
                     this.onDeviceChange(defaultOptionsValue(mappedDevices));
                 }).catch(err => {

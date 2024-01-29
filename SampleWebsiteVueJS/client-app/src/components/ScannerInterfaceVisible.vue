@@ -14,7 +14,7 @@
 
 <script>
     import $ from 'jquery'
-    import { K1WebTwain } from '../lib/k1scanservice/js/k1ss_obfuscated.js'
+    import { K1WebTwain } from '../lib/k1scanservice/js/k1ss.js'
 
     export default {
         name: 'ScannerInterfaceVisible',
@@ -29,9 +29,20 @@
             let self = this;
             let configuration = {
                 onComplete: function (response) {
+                    let responseMessage = response.uploadResponse;
+
+                    if (response.saveToType === K1WebTwain.Options.SaveToType.Local) {
+                        responseMessage = {
+                            filename: response.filename,
+                            fileSize: `${response.fileLength} (${response.sizeDisplay})`,
+                            fileExtention: response.extension
+                        };
+                    }
+
                     self.$parent.completeAcquire({
-                        acquireResponse: JSON.stringify(response.uploadResponse, null, 4),
+                        acquireResponse: JSON.stringify(responseMessage, null, 4),
                         acquireError: '',
+                        saveToType: response.saveToType
                     });
                 }, //function called when scan complete
                 viewButton: null, //This is optional. Specify a element that when clicked will view scanned document
