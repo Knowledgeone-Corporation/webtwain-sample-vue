@@ -2,7 +2,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using SampleWebsiteVueJS.Utils;
+using System.IO;
 
 namespace SampleWebsiteVueJS
 {
@@ -33,6 +36,17 @@ namespace SampleWebsiteVueJS
             {
                 app.UseExceptionHandler("/Error");
             }
+
+            app.UseProtectFolder(new ProtectFolderOptions
+            {
+                Path = "/Keys"
+            });
+
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(Path.Combine(env.ContentRootPath, "Keys")),
+                RequestPath = "/Keys"
+            });
 
             app.UseStaticFiles();
 

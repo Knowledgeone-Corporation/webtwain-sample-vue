@@ -28,7 +28,7 @@
         <ScannerInterfaceWeb v-if="selectedOption == 2"></ScannerInterfaceWeb>
         <ScannerInterfaceDesktop v-if="selectedOption == 3"></ScannerInterfaceDesktop>
 
-        <ScanCompleted v-if="acquireResponse" :msg="acquireResponse"></ScanCompleted>
+        <ScanCompleted v-if="acquireResponse" :msg="acquireResponse" :saveToType="saveToType"></ScanCompleted>
         <ScanError v-if="acquireError" :msg="acquireError"></ScanError>
     </div>
 </template>
@@ -40,6 +40,7 @@
     import ScannerInterfaceHidden from './ScannerInterfaceHidden.vue'
     import ScannerInterfaceVisible from './ScannerInterfaceVisible.vue'
     import ScannerInterfaceWeb from './ScannerInterfaceWeb.vue'
+    import { K1WebTwain } from '../lib/k1scanservice/js/k1ss.js'
 
     import '../lib/k1scanservice/css/k1ss.min.css';
 
@@ -50,18 +51,21 @@
                 selectedOption: -1,
                 acquireResponse: '',
                 acquireError: '',
+                saveToType: K1WebTwain.Options.SaveToType.Upload
             }
         },
         methods: {
             onInterfaceChange: function ($event) {
                 this.selectedOption = $event.target.value;
-                this.acquireResponse = ''
+                this.acquireResponse = '';
                 this.acquireError = '';
+                this.saveToType = K1WebTwain.Options.SaveToType.Upload;
             },
             completeAcquire: function ($event) {
                 this.selectedOption = -1;
                 this.acquireResponse = $event.acquireResponse;
                 this.acquireError = $event.acquireError;
+                this.saveToType = $event.saveToType;
             }     
         },
         components: {
@@ -73,7 +77,7 @@
             ScannerInterfaceWeb
         },
         props: {
-            msg: String
+            msg: String,
         },
     }
 </script>
