@@ -87,7 +87,7 @@
                             responseMessage = {
                                 filename: response.filename,
                                 fileSize: `${response.fileLength} (${response.sizeDisplay})`,
-                                fileExtention: response.extension
+                                fileExtension: response.extension
                             };
                         }
 
