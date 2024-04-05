@@ -83,7 +83,7 @@
 
             <div class="input-group">
                 <div class="input-group-btn">
-                    <button id="btn-acquire" type="button" class="btn btn-primary" aria-label="Bold" v-on:click="acquire">
+                    <button id="btn-acquire" type="button" class="btn btn-primary" aria-label="Bold" v-on:click="acquire" :disabled="isDisableScanButton">
                         <span>Scan</span>
                     </button>
                 </div>
@@ -104,7 +104,7 @@
         data: function () {
             return {
                 discoveredDevices: [],
-                selectedDevice: 0,
+                selectedDevice: -1,
                 selectedDeviceObj: {},
                 documentSourceOptions: [],
                 selectedDocumentSource: 0,
@@ -123,13 +123,14 @@
                 saveToTypeOptions: [],
                 selectedSaveToOption: K1WebTwain.Options.SaveToType.Upload,
                 outputFilename: '',
-                isDisplayUI: false
+                isDisplayUI: false,
+                isDisableScanButton: true
             }
         },
         methods: {
             onDeviceChange: function (deviceId) {
                 K1WebTwain.Device(deviceId).then(deviceInfo => {
-                    if(!isEmpty(deviceInfo)) {
+                    if (!isEmpty(deviceInfo)) {
                         let documentSourceOptions = Object.keys(deviceInfo.documentSourceIds).map((key) => {
                             return { value: key, display: deviceInfo.documentSourceIds[key].name };
                         });
@@ -142,12 +143,11 @@
                         this.pixelTypeOptions = [];
                         this.resolutionOptions = [];
                         this.documentSourceOptions = renderOptions(documentSourceOptions);
+                        this.isDisableScanButton = false;
 
                         this.onDocumentSourceChange(defaultOptionsValue(documentSourceOptions));
-                    }
-                    }).catch(err => {
-                        window.console.log(err);
-                        this.selectedDevice = deviceId;
+                    } else {
+                        this.selectedDevice = -1;
                         this.selectedDeviceObj = {};
                         this.selectedDocumentSource = 0;
                         this.duplexOptions = [];
@@ -155,8 +155,20 @@
                         this.pixelTypeOptions = [];
                         this.resolutionOptions = [];
                         this.documentSourceOptions = [];
-                    })
-                
+                        this.isDisableScanButton = true;
+                    }
+                }).catch(err => {
+                    window.console.log(err);
+                    this.selectedDevice = deviceId;
+                    this.selectedDeviceObj = {};
+                    this.selectedDocumentSource = 0;
+                    this.duplexOptions = [];
+                    this.pageSizeOptions = [];
+                    this.pixelTypeOptions = [];
+                    this.resolutionOptions = [];
+                    this.documentSourceOptions = [];
+                    this.isDisableScanButton = true;
+                })
             },
             onDocumentSourceChange: function (documentSourceId) {
                 let selectedDocumentSource = this.selectedDeviceObj.documentSourceIds[documentSourceId];
@@ -293,10 +305,10 @@
                 this.isDisplayUI = false;
 
                 K1WebTwain.ResetService().then(function () {
-                    setTimeout(() => {
+                    //setTimeout(() => {
                         self.renderSelection();
                         self.isDisplayUI = true;
-                    },4000)
+                    //},4000)
                 });
             }).catch(err => {
                 window.console.log(err);

@@ -3,7 +3,7 @@
         <div>
             <div id="device-group" class="twain-feature-group">
                 <label class="scanning-label">Device</label>
-                <select v-model="selectedDevice" class="form-control">
+                <select v-model="selectedDevice" class="form-control" @change="onDeviceChange($event.target.value)">
                     <option v-for="option in discoveredDevices" v-bind:key="option.value" v-bind:value="option.value">
                         {{ option.display }}
                     </option>
@@ -38,7 +38,7 @@
 
             <div class="input-group">
                 <div class="input-group-btn">
-                    <button id="btn-acquire" type="button" class="btn btn-primary" aria-label="Bold" v-on:click="acquire">
+                    <button id="btn-acquire" type="button" class="btn btn-primary" aria-label="Bold" v-on:click="acquire" :disabled="isDisableScanButton">
                         <span>Scan</span>
                     </button>
                 </div>
@@ -57,7 +57,7 @@
         data: function () {
             return {
                 outputFilename: '',
-                selectedDevice: 0,
+                selectedDevice: -1,
                 ocrOptions: [],
                 selectedOcrType: K1WebTwain.Options.OcrType.None,
                 saveToTypeOptions: [],
@@ -65,10 +65,14 @@
                 fileTypeOptions: [],
                 selectedFileTypeOption: K1WebTwain.Options.OutputFiletype.PDF,
                 discoveredDevices: [],
-                isDisplayUI: false
+                isDisplayUI: false,
+                isDisableScanButton: true
             }
         },
         methods: {
+            onDeviceChange: function (deviceId) {
+                this.isDisableScanButton = parseInt(deviceId) === -1;
+            },
             acquire: function () {
                 this.isDisplayUI = false;
                 let acquireRequest = {
@@ -169,10 +173,10 @@
                 this.isDisplayUI = false;
 
                 K1WebTwain.ResetService().then(function () {
-                    setTimeout(() => {
+                    //setTimeout(() => {
                         self.renderSelection();
                         self.isDisplayUI = true;
-                    },4000)
+                    //},4000)
                 });
             }).catch(err => {
                 window.console.log(err);
