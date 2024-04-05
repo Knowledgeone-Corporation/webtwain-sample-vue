@@ -4,7 +4,7 @@
         <div class="input-group">
             <div class="input-group-btn">
                 <button id="scanbtn" type="button" class="btn btn-primary" aria-label="Bold">
-                    <span>Scan</span>
+                    <span>Initialize</span>
                 </button>
             </div>
         </div>
@@ -64,9 +64,9 @@
                 this.isDisplayUI = false;
 
                 K1WebTwain.ResetService().then(function () {
-                    setTimeout(() => {
+                    //setTimeout(() => {
                         self.isDisplayUI = true;
-                    },4000)
+                    //},4000)
                 });
             }).catch(err => {
                 window.console.log(err);
