@@ -1,7 +1,7 @@
 <template>
     <div id="k1interface-visible" :class="{ 'show': isDisplayUI, 'hide': !isDisplayUI }">
 
-        <div><label class="scanning-label">Scan Document:</label></div>
+        <div><label class="scanning-label">Initialize Scan Process:</label></div>
         <div class="input-group">
             <div class="input-group-btn">
                 <button id="scanbtn" type="button" class="btn btn-primary" aria-label="Bold">
