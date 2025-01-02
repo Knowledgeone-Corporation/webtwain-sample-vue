@@ -37,9 +37,6 @@
                     <input v-model="outputFilename" id="sel-output-name" class="form-control" type="text"
                         placeholder="Please enter a file name" />
                     <label class="scanning-label mt-2">Output File Type</label>
-                    <span class="filetype-restriction" v-if="isDisplayFileRestriction">
-                        File types restricted for multiple page scans
-                    </span>
                     <select v-model="selectedFileTypeOption" class="form-control"
                         @change="handleFileTypeChange($event.target.value)">
                         <option v-for="option in fileTypeOptions" v-bind:key="option.value" v-bind:value="option.value">
@@ -101,7 +98,6 @@ export default {
             isDisplayScanningSection: false,
             isDisableScanButton: true,
             isDisableFinalizeSection: true,
-            isDisplayFileRestriction: false,
             isDisplayOCR: false
         }
     },
@@ -122,33 +118,7 @@ export default {
             };
 
             K1WebTwain.StartScan(acquireRequest)
-                .then(response => {
-                    if (response.pageCount > 1) {
-                        this.isDisplayFileRestriction = true;
-                        let fileType = this.selectedFileTypeOption;
-                        if (
-                            fileType === "JPG" ||
-                            fileType === "GIF" ||
-                            fileType === "PNG" ||
-                            fileType === "BMP"
-                        ) {
-                            this.selectedFileTypeOption = K1WebTwain.Options.OutputFiletype.TIFF;
-                        }
-                        this.fileTypeOptions = this.fileTypeOptions.filter(
-                            (fileType) =>
-                                fileType.value === "PDF" ||
-                                fileType.value === "PDF/A" ||
-                                fileType.value === "TIF"
-                        );
-                    } else {
-                        this.isDisplayFileRestriction = false;
-                        let mappedFileTypeOptions = convertRawOptions(
-                            K1WebTwain.Options.OutputFiletype,
-                            true
-                        );
-                        this.fileTypeOptions = renderOptions(mappedFileTypeOptions);
-                    }
-
+                .then(() => {
                     this.isDisableFinalizeSection = false;
                     this.isDisableScanButton = true;
                 })
