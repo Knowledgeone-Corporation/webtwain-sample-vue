@@ -142,15 +142,15 @@ export default {
                 this.isDisplayScanningSection = true;
 
                 const scanSettings = getDefaultScanSettings();
-                const deviceId = scanSettings?.ScannerDetails?.ScanSource;
 
-                if (deviceId) {
+                if (scanSettings) {
+                    const deviceId = scanSettings?.ScannerDetails?.ScanSource ? parseInt(scanSettings?.ScannerDetails?.ScanSource) : -1;
                     this.selectedDeviceId = deviceId;
                     this.selectedFileTypeOption = scanSettings.ScanType;
                     this.selectedOcrOption = scanSettings.UseOCR
                         ? scanSettings.OCRType
                         : K1WebTwain.Options.OcrType.None;
-                    this.isDisableScanButton = parseInt(deviceId) === -1;
+                    this.isDisableScanButton = deviceId === -1;
                 }
 
                 this.isDisplayOCR =
