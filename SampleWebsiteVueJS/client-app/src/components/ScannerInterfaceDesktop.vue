@@ -80,7 +80,7 @@ import $ from 'jquery'
 import { K1WebTwain } from '../lib/k1scanservice/js/k1ss.js'
 import {
     convertRawOptions, generateScanFileName, saveDefaultScanSettings,
-    getDefaultScanSettings, renderOptions
+    getDefaultScanSettings, getScannerDetails, renderOptions
 } from '../utils/scanningUtils.js'
 
 export default {
@@ -105,11 +105,14 @@ export default {
         handleDeviceChange: function (deviceId) {
             this.isDisableScanButton = parseInt(deviceId) === -1;
 
-            let defaultSettings = getDefaultScanSettings();
+            const defaultSettings = getDefaultScanSettings();
+            let scannerDetails = getScannerDetails(defaultSettings);
+            scannerDetails.ScanSource = parseInt(deviceId);
+
             saveDefaultScanSettings(
                 defaultSettings?.ScanType ?? this.selectedFileTypeOption,
                 defaultSettings?.OCRType ?? this.selectedOcrOption,
-                deviceId
+                scannerDetails
             );
         },
         acquire: function () {
@@ -138,14 +141,16 @@ export default {
                 this.outputFilename = generateScanFileName();
                 this.isDisplayScanningSection = true;
 
-                let scanSettings = getDefaultScanSettings();
-                if (scanSettings) {
-                    this.selectedDeviceId = scanSettings.ScanSource;
+                const scanSettings = getDefaultScanSettings();
+                const deviceId = scanSettings?.ScannerDetails?.ScanSource;
+
+                if (deviceId) {
+                    this.selectedDeviceId = deviceId;
                     this.selectedFileTypeOption = scanSettings.ScanType;
                     this.selectedOcrOption = scanSettings.UseOCR
                         ? scanSettings.OCRType
                         : K1WebTwain.Options.OcrType.None;
-                    this.isDisableScanButton = parseInt(scanSettings.ScanSource) === -1;
+                    this.isDisableScanButton = parseInt(deviceId) === -1;
                 }
 
                 this.isDisplayOCR =
@@ -162,20 +167,20 @@ export default {
             this.isDisplayOCR =
                 outputType === K1WebTwain.Options.OutputFiletype.PDF ||
                 outputType === K1WebTwain.Options.OutputFiletype["PDF/A"];
-            let defaultSettings = getDefaultScanSettings();
+            const defaultSettings = getDefaultScanSettings();
+
             saveDefaultScanSettings(
                 outputType,
-                defaultSettings?.OCRType ?? this.selectedOcrOption,
-                defaultSettings?.ScanSource ?? this.selectedDeviceId
+                defaultSettings?.OCRType ?? this.selectedOcrOption
             );
         },
         handlOcrTypeChange: function (ocrType) {
             this.selectedOcrOption = ocrType
-            let defaultSettings = getDefaultScanSettings();
+            const defaultSettings = getDefaultScanSettings();
+
             saveDefaultScanSettings(
                 defaultSettings?.ScanType ?? this.selectedFileTypeOption,
-                ocrType,
-                defaultSettings?.ScanSource ?? this.selectedDeviceId
+                ocrType
             );
         },
         handleCancelFinalization: function () {

@@ -26,7 +26,7 @@
                 <div id="size-group" class="twain-feature-group" v-if="documentSourceOptions.length > 0">
                     <label class="scanning-label mt-2">Document Source:</label>
                     <select v-model="selectedDocumentSource" class="form-control"
-                        @change="onDocumentSourceChange($event.target.value)">
+                        @change="handleDocumentSourceChange($event.target.value)">
                         <option v-for="option in documentSourceOptions" v-bind:key="option.value"
                             v-bind:value="option.value">
                             {{ option.display }}
@@ -35,7 +35,8 @@
                 </div>
                 <div id="size-group" class="twain-feature-group" v-if="resolutionOptions.length > 0">
                     <label class="scanning-label mt-2">Resolution (DPI):</label>
-                    <select v-model="selectedResolutionOption" class="form-control">
+                    <select v-model="selectedResolutionOption" class="form-control"
+                        @change="handleResolutionChange($event.target.value)">
                         <option v-for="option in resolutionOptions" v-bind:key="option.value"
                             v-bind:value="option.value">
                             {{ option.display }}
@@ -44,7 +45,8 @@
                 </div>
                 <div id="size-group" class="twain-feature-group" v-if="pixelTypeOptions.length > 0">
                     <label class="scanning-label mt-2">Color:</label>
-                    <select v-model="selectedPixelTypeOption" class="form-control">
+                    <select v-model="selectedPixelTypeOption" class="form-control"
+                        @change="handlePixelTypeChange($event.target.value)">
                         <option v-for="option in pixelTypeOptions" v-bind:key="option.value"
                             v-bind:value="option.value">
                             {{ option.display }}
@@ -53,7 +55,8 @@
                 </div>
                 <div id="size-group" class="twain-feature-group" v-if="pageSizeOptions.length > 0">
                     <label class="scanning-label mt-2">Page Size:</label>
-                    <select v-model="selectedPageSizeOption" class="form-control">
+                    <select v-model="selectedPageSizeOption" class="form-control"
+                        @change="handlePageSizeChange($event.target.value)">
                         <option v-for="option in pageSizeOptions" v-bind:key="option.value" v-bind:value="option.value">
                             {{ option.display }}
                         </option>
@@ -61,7 +64,8 @@
                 </div>
                 <div id="size-group" class="twain-feature-group" v-if="duplexOptions.length > 0">
                     <label class="scanning-label mt-2">Duplex Option:</label>
-                    <select v-model="selectedDuplexOption" class="form-control">
+                    <select v-model="selectedDuplexOption" class="form-control"
+                        @change="handleDuplexChange($event.target.value)">
                         <option v-for="option in duplexOptions" v-bind:key="option.value" v-bind:value="option.value">
                             {{ option.display }}
                         </option>
@@ -124,7 +128,7 @@ import { isEmpty } from 'lodash'
 import { K1WebTwain } from '../lib/k1scanservice/js/k1ss.js'
 import {
     convertRawOptions, defaultOptionsValue, saveDefaultScanSettings,
-    getDefaultScanSettings, generateScanFileName, renderOptions
+    getDefaultScanSettings, getScannerDetails, generateScanFileName, renderOptions
 } from '../utils/scanningUtils.js'
 
 export default {
@@ -159,14 +163,18 @@ export default {
     methods: {
         handleDeviceChange: function (deviceId) {
             K1WebTwain.Device(deviceId).then(deviceInfo => {
+                let defaultSettings = getDefaultScanSettings();
+
                 if (!isEmpty(deviceInfo)) {
                     let documentSourceOptions = Object.keys(deviceInfo.documentSourceIds).map((key) => {
                         return { value: key, display: deviceInfo.documentSourceIds[key].name };
                     });
 
+                    const defaultDocumentSource = defaultSettings?.ScannerDetails?.DocumentSource ?? defaultOptionsValue(documentSourceOptions);
+
                     this.selectedDeviceId = deviceId;
                     this.selectedDeviceInfo = deviceInfo;
-                    this.selectedDocumentSource = defaultOptionsValue(documentSourceOptions);
+                    this.selectedDocumentSource = defaultDocumentSource;
                     this.duplexOptions = [];
                     this.pageSizeOptions = [];
                     this.pixelTypeOptions = [];
@@ -174,7 +182,7 @@ export default {
                     this.documentSourceOptions = renderOptions(documentSourceOptions);
                     this.isDisableScanButton = false;
 
-                    this.onDocumentSourceChange(defaultOptionsValue(documentSourceOptions));
+                    this.handleDocumentSourceChange(defaultDocumentSource);
                 } else {
                     this.selectedDeviceId = -1;
                     this.selectedDeviceInfo = {};
@@ -187,12 +195,9 @@ export default {
                     this.isDisableScanButton = true;
                 }
 
-                let defaultSettings = getDefaultScanSettings();
-                saveDefaultScanSettings(
-                    defaultSettings?.ScanType ?? this.selectedFileTypeOption,
-                    defaultSettings?.OCRType ?? this.selectedOcrOption,
-                    deviceId
-                );
+                let scannerDetails = getScannerDetails(defaultSettings);
+                scannerDetails.ScanSource = deviceId;
+                this.saveDefaultScannerDetails(defaultSettings, scannerDetails);
             }).catch(err => {
                 window.console.log(err);
                 this.selectedDeviceId = deviceId;
@@ -206,7 +211,17 @@ export default {
                 this.isDisableScanButton = true;
             })
         },
-        onDocumentSourceChange: function (documentSourceId) {
+        saveDefaultScannerDetails: function (defaultSettings, scannerDetails) {
+            saveDefaultScanSettings(
+                defaultSettings?.ScanType ?? this.selectedFileTypeOption,
+                defaultSettings?.OCRType ?? this.selectedOcrOption,
+                scannerDetails
+            );
+        },
+        handleDocumentSourceChange: function (documentSourceId) {
+            let defaultSettings = getDefaultScanSettings();
+            let scannerDetails = getScannerDetails(defaultSettings);
+
             let selectedDocumentSource = this.selectedDeviceInfo.documentSourceIds[documentSourceId];
 
             let duplexOptions = [],
@@ -223,15 +238,46 @@ export default {
                 selectedDocumentSource = null;
             }
 
-            this.selectedDuplexOption = defaultOptionsValue(duplexOptions);
-            this.selectedPageSizeOption = defaultOptionsValue(pageSizeOptions);
-            this.selectedPixelTypeOption = defaultOptionsValue(pixelTypeOptions);
-            this.selectedResolutionOption = defaultOptionsValue(resolutionOptions);
+            this.selectedDuplexOption = scannerDetails?.Duplex ?? defaultOptionsValue(duplexOptions);
+            this.selectedPageSizeOption = scannerDetails?.PageSize ?? defaultOptionsValue(pageSizeOptions);
+            this.selectedPixelTypeOption = scannerDetails?.Color ?? defaultOptionsValue(pixelTypeOptions);
+            this.selectedResolutionOption = scannerDetails?.Resolution ?? defaultOptionsValue(resolutionOptions);
             this.selectedDocumentSource = documentSourceId;
             this.duplexOptions = renderOptions(duplexOptions);
             this.pageSizeOptions = renderOptions(pageSizeOptions);
             this.pixelTypeOptions = renderOptions(pixelTypeOptions);
             this.resolutionOptions = renderOptions(resolutionOptions);
+
+            scannerDetails.DocumentSource = documentSourceId;
+            this.saveDefaultScannerDetails(defaultSettings, scannerDetails);
+        },
+        handleResolutionChange: function (selectedResolution) {
+            this.selectedResolutionOption = selectedResolution;
+            let defaultSettings = getDefaultScanSettings();
+            let scannerDetails = getScannerDetails(defaultSettings);
+            scannerDetails.Resolution = selectedResolution;
+            this.saveDefaultScannerDetails(defaultSettings, scannerDetails);
+        },
+        handlePixelTypeChange: function (selectedPixelType) {
+            this.selectedPixelTypeOption = selectedPixelType;
+            let defaultSettings = getDefaultScanSettings();
+            let scannerDetails = getScannerDetails(defaultSettings);
+            scannerDetails.Color = selectedPixelType;
+            this.saveDefaultScannerDetails(defaultSettings, scannerDetails);
+        },
+        handlePageSizeChange: function (selectedPageSize) {
+            this.selectedPageSizeOption = selectedPageSize;
+            let defaultSettings = getDefaultScanSettings();
+            let scannerDetails = getScannerDetails(defaultSettings);
+            scannerDetails.PageSize = selectedPageSize;
+            this.saveDefaultScannerDetails(defaultSettings, scannerDetails);
+        },
+        handleDuplexChange: function (selectedDuplex) {
+            this.selectedDuplexOption = selectedDuplex;
+            let defaultSettings = getDefaultScanSettings();
+            let scannerDetails = getScannerDetails(defaultSettings);
+            scannerDetails.Duplex = selectedDuplex;
+            this.saveDefaultScannerDetails(defaultSettings, scannerDetails);
         },
         acquire: function () {
             let acquireRequest = {
@@ -264,14 +310,16 @@ export default {
                 this.outputFilename = generateScanFileName();
                 this.isDisplayScanningSection = true;
 
-                let scanSettings = getDefaultScanSettings();
-                if (scanSettings) {
+                const scanSettings = getDefaultScanSettings();
+                const deviceId = scanSettings?.ScannerDetails?.ScanSource;
+
+                if (deviceId) {
                     this.selectedFileTypeOption = scanSettings.ScanType;
                     this.selectedOcrOption = scanSettings.UseOCR
                         ? scanSettings.OCRType
                         : K1WebTwain.Options.OcrType.None;
-                    this.isDisableScanButton = parseInt(scanSettings.ScanSource) === -1;
-                    this.handleDeviceChange(scanSettings.ScanSource);
+                    this.isDisableScanButton = parseInt(deviceId) === -1;
+                    this.handleDeviceChange(deviceId);
                 } else {
                     this.handleDeviceChange(defaultOptionsValue(mappedDevices));
                 }
@@ -290,20 +338,20 @@ export default {
             this.isDisplayOCR =
                 outputType === K1WebTwain.Options.OutputFiletype.PDF ||
                 outputType === K1WebTwain.Options.OutputFiletype["PDF/A"];
-            let defaultSettings = getDefaultScanSettings();
+            const defaultSettings = getDefaultScanSettings();
+
             saveDefaultScanSettings(
                 outputType,
                 defaultSettings?.OCRType ?? this.selectedOcrOption,
-                defaultSettings?.ScanSource ?? this.selectedDeviceId
             );
         },
         handlOcrTypeChange: function (ocrType) {
             this.selectedOcrOption = ocrType
-            let defaultSettings = getDefaultScanSettings();
+            const defaultSettings = getDefaultScanSettings();
+
             saveDefaultScanSettings(
                 defaultSettings?.ScanType ?? this.selectedFileTypeOption,
-                ocrType,
-                defaultSettings?.ScanSource ?? this.selectedDeviceId
+                ocrType
             );
         },
         handleCancelFinalization: function () {
