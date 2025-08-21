@@ -44,6 +44,14 @@
                         </option>
                     </select>
 
+                    <label class="scanning-label mt-2">Output File Compression</label>
+                    <select v-model="selectedCompressionOption" class="form-control"
+                        @change="handleCompressionChange($event.target.value)">
+                        <option v-for="option in compressionOptions" v-bind:key="option.value" v-bind:value="option.value">
+                            {{ option.display }}
+                        </option>
+                    </select>
+
                     <div v-if="isDisplayOCR">
                         <label class="scanning-label mt-2">OCR Type</label>
                         <select v-model="selectedOcrOption" class="form-control"
@@ -98,7 +106,9 @@ export default {
             isDisplayScanningSection: false,
             isDisableScanButton: true,
             isDisableFinalizeSection: true,
-            isDisplayOCR: false
+            isDisplayOCR: false,
+            compressionOptions: [],
+            selectedCompressionOption: ""
         }
     },
     methods: {
@@ -134,9 +144,12 @@ export default {
                 let mappedDevices = devices.map(device => ({ value: device.id, display: device.name }));
                 let mappedOcrTypes = convertRawOptions(K1WebTwain.Options.OcrType, true);
                 let mappedFileTypeOptions = convertRawOptions(K1WebTwain.Options.OutputFiletype, true);
+                let mappedCompressionOptions = convertRawOptions(K1WebTwain.Options.FileCompressionType, true);
 
                 this.ocrOptions = renderOptions(mappedOcrTypes);
                 this.fileTypeOptions = renderOptions(mappedFileTypeOptions);
+                this.compressionOptions = renderOptions(mappedCompressionOptions);
+                this.selectedCompressionOption = mappedCompressionOptions.length > 0 ? mappedCompressionOptions[0].value : "";
                 this.discoveredDevices = renderOptions(mappedDevices);
                 this.outputFilename = generateScanFileName();
                 this.isDisplayScanningSection = true;
@@ -147,40 +160,47 @@ export default {
                     const deviceId = scanSettings?.ScannerDetails?.ScanSource ? parseInt(scanSettings?.ScannerDetails?.ScanSource) : -1;
                     this.selectedDeviceId = deviceId;
                     this.selectedFileTypeOption = scanSettings.ScanType;
-                    this.selectedOcrOption = scanSettings.UseOCR
-                        ? scanSettings.OCRType
-                        : K1WebTwain.Options.OcrType.None;
+                    this.selectedOcrOption = scanSettings.UseOCR ? scanSettings.OCRType : K1WebTwain.Options.OcrType.None;
+                    this.selectedCompressionOption = scanSettings.FileCompressionType ?? (mappedCompressionOptions.length > 0 ? mappedCompressionOptions[0].value : "");
                     this.isDisableScanButton = deviceId === -1;
                 }
 
                 this.isDisplayOCR =
-                    this.selectedFileTypeOption ===
-                    K1WebTwain.Options.OutputFiletype.PDF ||
-                    this.selectedFileTypeOption ===
-                    K1WebTwain.Options.OutputFiletype["PDF/A"];
+                    this.selectedFileTypeOption === K1WebTwain.Options.OutputFiletype.PDF ||
+                    this.selectedFileTypeOption === K1WebTwain.Options.OutputFiletype["PDF/A"];
             }).catch(err => {
                 window.console.error(err);
             });
         },
         handleFileTypeChange: function (outputType) {
             this.selectedFileTypeOption = outputType;
-            this.isDisplayOCR =
-                outputType === K1WebTwain.Options.OutputFiletype.PDF ||
-                outputType === K1WebTwain.Options.OutputFiletype["PDF/A"];
+            this.isDisplayOCR = outputType === K1WebTwain.Options.OutputFiletype.PDF || outputType === K1WebTwain.Options.OutputFiletype["PDF/A"];
             const defaultSettings = getDefaultScanSettings();
-
             saveDefaultScanSettings(
                 outputType,
-                defaultSettings?.OCRType ?? this.selectedOcrOption
+                defaultSettings?.OCRType ?? this.selectedOcrOption,
+                null,
+                this.selectedCompressionOption
             );
         },
         handlOcrTypeChange: function (ocrType) {
             this.selectedOcrOption = ocrType
             const defaultSettings = getDefaultScanSettings();
-
             saveDefaultScanSettings(
                 defaultSettings?.ScanType ?? this.selectedFileTypeOption,
-                ocrType
+                ocrType,
+                null,
+                this.selectedCompressionOption
+            );
+        },
+        handleCompressionChange: function (compressionType) {
+            this.selectedCompressionOption = compressionType;
+            const defaultSettings = getDefaultScanSettings();
+            saveDefaultScanSettings(
+                defaultSettings?.ScanType ?? this.selectedFileTypeOption,
+                defaultSettings?.OCRType ?? this.selectedOcrOption,
+                null,
+                compressionType
             );
         },
         handleCancelFinalization: function () {
@@ -197,6 +217,7 @@ export default {
             K1WebTwain.ValidatePageSize({
                 ocrType: this.selectedOcrOption,
                 fileType: this.selectedFileTypeOption,
+                fileCompressionType: this.selectedCompressionOption,
                 saveToType: K1WebTwain.Options.SaveToType.Upload,
                 generateDocument: () => {
                     this.generateDocument(K1WebTwain.Options.SaveToType.Upload);
@@ -207,6 +228,7 @@ export default {
             K1WebTwain.ValidatePageSize({
                 ocrType: this.selectedOcrOption,
                 fileType: this.selectedFileTypeOption,
+                fileCompressionType: this.selectedCompressionOption,
                 saveToType: K1WebTwain.Options.SaveToType.Local,
                 generateDocument: () => {
                     this.generateDocument(K1WebTwain.Options.SaveToType.Local);
@@ -217,6 +239,7 @@ export default {
             K1WebTwain.GenerateDocument({
                 filetype: this.selectedFileTypeOption,
                 ocrType: this.selectedOcrOption,
+                fileCompressionType: this.selectedCompressionOption,
                 saveToType: saveToType,
                 filename: this.outputFilename,
             })
